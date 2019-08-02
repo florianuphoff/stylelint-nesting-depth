@@ -1,7 +1,6 @@
 const stylelint = require('stylelint')
 const parser = require("postcss-selector-parser")
 const isStandardSyntaxRule = require('stylelint/lib/utils/isStandardSyntaxRule')
-const optionsMatches = require('stylelint/lib/utils/optionsMatches')
 const ruleName = 'plugin/report-nesting-depth'
 const messages =  stylelint.utils.ruleMessages(ruleName, {
   report: 'Generated report. node = map with depths per selector'
@@ -26,9 +25,10 @@ module.exports = stylelint.createPlugin(
 
     stylelint.utils.report({
       ruleName,
-      postcssResult,
+      result: postcssResult,
       node: nestingDepthMap,
-      message: messages.report
+      message: messages.report,
+      line: 1
     });
 
     function checkStatement(statement) {
@@ -44,17 +44,18 @@ module.exports = stylelint.createPlugin(
         return;
       }
 
-      const depth = nestingDepth(statement);
+      const ro = nestingDepth(statement);
 
-      nestingDepthMap.set(statement.selector, depth)
+      if(ro) nestingDepthMap.set(ro.selectorList, ro.level)
     }
 
-    function nestingDepth(node, level) {
+    function nestingDepth(node, level, selectorList) {
       level = level || 0;
+      selectorList = selectorList || node.selector
       const parent = node.parent;
 
       if (isIgnoreAtRule(parent)) {
-        return 0;
+        return null;
       }
 
       // The nesting depth level's computation has finished
@@ -65,7 +66,7 @@ module.exports = stylelint.createPlugin(
         parent.type === "root" ||
         (parent.type === "atrule" && parent.parent.type === "root")
       ) {
-        return level;
+        return {level: level, selectorList: selectorList};
       }
 
       function containsPseudoClassesOnly(selector) {
@@ -78,21 +79,22 @@ module.exports = stylelint.createPlugin(
       }
 
       if (
-        (optionsMatches(options, "ignore", "blockless-at-rules") &&
-          node.type === "atrule" &&
+        (node.type === "atrule" &&
           node.every(child => child.type !== "decl")) ||
-        (optionsMatches(options, "ignore", "pseudo-classes") &&
-          node.type === "rule" &&
+        (node.type === "rule" &&
           containsPseudoClassesOnly(node.selector))
       ) {
-        return nestingDepth(parent, level);
+        selectorList = `${node.parent.selector} ${selectorList}`
+        return nestingDepth(parent, level, selectorList);
       }
 
       // Unless any of the conditions above apply, we want to
       // add 1 to the nesting depth level and then check the parent,
       // continuing to add and move up the hierarchy
       // until we hit the root node
-      return nestingDepth(parent, level + 1);
+      selectorList = `${node.parent.selector} ${selectorList}`
+      
+      return nestingDepth(parent, level + 1, selectorList);
     }
   }
 )
