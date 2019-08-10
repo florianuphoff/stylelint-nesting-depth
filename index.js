@@ -21,8 +21,6 @@ module.exports = stylelint.createPlugin(
     postcssRoot.walkRules(checkStatement);
     postcssRoot.walkAtRules(checkStatement);
 
-    console.log(nestingDepthMap)
-
     stylelint.utils.report({
       ruleName,
       result: postcssResult,
@@ -84,7 +82,12 @@ module.exports = stylelint.createPlugin(
         (node.type === "rule" &&
           containsPseudoClassesOnly(node.selector))
       ) {
-        selectorList = `${node.parent.selector} ${selectorList}`
+        if(selectorList.includes('&')) {
+          selectorList = selectorList.replace(/&/, '')    
+          selectorList = `${node.parent.selector}${selectorList}`
+        } else {
+          selectorList = `${node.parent.selector} ${selectorList}`
+        }
         return nestingDepth(parent, level, selectorList);
       }
 
@@ -92,8 +95,16 @@ module.exports = stylelint.createPlugin(
       // add 1 to the nesting depth level and then check the parent,
       // continuing to add and move up the hierarchy
       // until we hit the root node
-      selectorList = `${node.parent.selector} ${selectorList}`
+
+      // replace nesting operator to we get css3 selectors
       
+      if(selectorList.includes('&')) {
+        selectorList = selectorList.replace(/&/, '')
+        selectorList = `${node.parent.selector}${selectorList}`
+      } else {
+        selectorList = `${node.parent.selector} ${selectorList}`
+      }
+
       return nestingDepth(parent, level + 1, selectorList);
     }
   }
