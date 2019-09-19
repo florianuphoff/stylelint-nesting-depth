@@ -1,13 +1,5 @@
 const testRule = require('stylelint-test-rule-tape');
 const plugin = require('..');
-const depthMap = new Map();
-depthMap.set('a', 0);
-depthMap.set('#id4 .c4 .c5', 2);
-depthMap.set('#id4 .c4 .c5 ~ .list__item', 3);
-depthMap.set('a .awd', 1);
-depthMap.set('#id4 .c4 .c5 ~ .list__item .list__link:hover', 4);
-
-// Test are failing
 
 testRule(plugin.rule, {
   ruleName: plugin.ruleName,

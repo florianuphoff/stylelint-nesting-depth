@@ -9,17 +9,20 @@ const isIgnoreAtRule = node =>
     node.type === "atrule"
 const hasBlock = statement =>
     statement.nodes !== undefined
+const resolvedNestedSelector = require("postcss-resolve-nested-selector")
 
 module.exports = stylelint.createPlugin(
   ruleName, 
   (actual) => (postcssRoot, postcssResult) => {
     const validOptions = stylelint.utils.validateOptions(postcssResult, ruleName, { actual });
-    let nestingDepthMap = new Map();
+    let nestingDepthMap = []
 
     if (!validOptions) return;
 
     postcssRoot.walkRules(checkStatement);
     postcssRoot.walkAtRules(checkStatement);
+
+    console.log(JSON.stringify(nestingDepthMap))
 
     stylelint.utils.report({
       ruleName,
@@ -44,12 +47,15 @@ module.exports = stylelint.createPlugin(
 
       const ro = nestingDepth(statement);
 
-      if(ro) nestingDepthMap.set(ro.selectorList, ro.level)
+      if(ro) {
+        const resolvedSelector = resolvedNestedSelector(ro.origin.selector, ro.origin)[0]
+        nestingDepthMap.push({ selector: resolvedSelector, depth: ro.level})
+      }
     }
 
-    function nestingDepth(node, level, selectorList) {
+    function nestingDepth(node, level, originNode) {
       level = level || 0;
-      selectorList = selectorList || node.selector
+      originNode = originNode || node
       const parent = node.parent;
 
       if (isIgnoreAtRule(parent)) {
@@ -64,7 +70,7 @@ module.exports = stylelint.createPlugin(
         parent.type === "root" ||
         (parent.type === "atrule" && parent.parent.type === "root")
       ) {
-        return {level: level, selectorList: selectorList};
+        return {level: level, origin: originNode};
       }
 
       function containsPseudoClassesOnly(selector) {
@@ -82,13 +88,7 @@ module.exports = stylelint.createPlugin(
         (node.type === "rule" &&
           containsPseudoClassesOnly(node.selector))
       ) {
-        if(selectorList.includes('&')) {
-          selectorList = selectorList.replace(/&/, '')    
-          selectorList = `${node.parent.selector}${selectorList}`
-        } else {
-          selectorList = `${node.parent.selector} ${selectorList}`
-        }
-        return nestingDepth(parent, level, selectorList);
+        return nestingDepth(parent, level, originNode);
       }
 
       // Unless any of the conditions above apply, we want to
@@ -97,15 +97,8 @@ module.exports = stylelint.createPlugin(
       // until we hit the root node
 
       // replace nesting operator to we get css3 selectors
-      
-      if(selectorList.includes('&')) {
-        selectorList = selectorList.replace(/&/, '')
-        selectorList = `${node.parent.selector}${selectorList}`
-      } else {
-        selectorList = `${node.parent.selector} ${selectorList}`
-      }
 
-      return nestingDepth(parent, level + 1, selectorList);
+      return nestingDepth(parent, level + 1, originNode);
     }
   }
 )
