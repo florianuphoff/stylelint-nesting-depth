@@ -22,8 +22,6 @@ module.exports = stylelint.createPlugin(
     postcssRoot.walkRules(checkStatement);
     postcssRoot.walkAtRules(checkStatement);
 
-    console.log(JSON.stringify(nestingDepthMap))
-
     stylelint.utils.report({
       ruleName,
       result: postcssResult,
@@ -61,11 +59,6 @@ module.exports = stylelint.createPlugin(
       if (isIgnoreAtRule(parent)) {
         return null;
       }
-
-      // The nesting depth level's computation has finished
-      // when this function, recursively called, receives
-      // a node that is not nested -- a direct child of the
-      // root node
       if (
         parent.type === "root" ||
         (parent.type === "atrule" && parent.parent.type === "root")
@@ -90,14 +83,6 @@ module.exports = stylelint.createPlugin(
       ) {
         return nestingDepth(parent, level, originNode);
       }
-
-      // Unless any of the conditions above apply, we want to
-      // add 1 to the nesting depth level and then check the parent,
-      // continuing to add and move up the hierarchy
-      // until we hit the root node
-
-      // replace nesting operator to we get css3 selectors
-
       return nestingDepth(parent, level + 1, originNode);
     }
   }

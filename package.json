@@ -1,6 +1,6 @@
 {
   "name": "stylelint-nesting-depth",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "This stylelint plugin reports the nesting depth per selector. It's used by the stylelint-code-quality-config to generate a visual dashboard. ",
   "license": "MIT",
   "repository": "florianuphoff/stylelint-nesting-depth",
